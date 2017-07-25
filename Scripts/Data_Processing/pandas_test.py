@@ -5,7 +5,7 @@ import pandas as pd
 # import seaborn as sns
 # import tensorflow as tf
 
-base_folder_path = "C:\\Users\\ANGRY\\Documents\\Projects\\Tensorflow\\Instacart"
+base_folder_path = "C:\\Users\\Eric\\Documents\\Projects\\Tensorflow\\ICBasketPrediction"
 data_folder_path = "\\Data\\"
 inpath_str 	 = base_folder_path + data_folder_path
 
