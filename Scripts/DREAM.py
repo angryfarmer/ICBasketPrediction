@@ -1,16 +1,18 @@
 import tensorflow as tf
 import numpy as np
 
+
 ## Load input basket data
 in_data = np.load('..\\Processed_Data\\instacart_data_input.npy')
-in_dims = np.load('..\\Processed_Data\\input_dims.npy')
 
 ## Input dimension sizes
+in_dims						= np.load('..\\Processed_Data\\input_dims.npy')
 number_of_products 			= in_dims[2]
 number_of_product_features 	= in_dims[3]
 number_of_time_steps 		= in_dims[1]
 number_of_users 			= in_dims[0]
 
+print(in_dims)
 ## Ranks for Each Layer
 L_1_nodes 		= number_of_product_features
 user_features 	= number_of_product_features
@@ -31,16 +33,19 @@ W_2 	= tf.Variable(tf.truncated_normal([L_1_nodes,user_features],stddev = 0.5, m
 product_weights = tf.Variable(tf.truncated_normal([number_of_products,number_of_product_features],stddev = 0.5,mean = 0),name = "product_weights")
 
 ## Placeholders to run graph
-input_data			= tf.placeholder(tf.float32,in_dims)
-prev_cell_state 	= tf.zeros([number_of_users,L_1_nodes])
-prev_hidden_layer 	= tf.zeros([number_of_users,L_1_nodes])
-cost 				= tf.reduce_sum(tf.zeros([1]))
+input_data					= tf.placeholder(tf.float32,[None,number_of_time_steps,number_of_products,number_of_product_features])
+prev_cell_state 			= tf.zeros([number_of_users,L_1_nodes])
+prev_hidden_layer 			= tf.zeros([number_of_users,L_1_nodes])
+cost 						= tf.reduce_sum(tf.zeros([1]))
+user_basket_representation 	= tf.zeros([tf.shape(input_data)[0],number_of_product_features])
 
 for n in range(number_of_time_steps - 1):
 	## Prepare input using max of each feature over last n baskets
-	user_baskets_0_to_n 		= tf.slice(input_data,[0,0,0,0],[-1,n+1,-1,-1])
+	user_baskets_0_to_n 		= tf.slice(input_data,[0,n,0,0],[-1,1,-1,-1])
 	user_baskets_0_to_n 		= tf.multiply(user_baskets_0_to_n,product_weights)
-	user_basket_representation 	= tf.reduce_max(tf.reduce_max(user_baskets_0_to_n,2),1)
+	user_baskets_0_to_n 		= tf.reduce_max(user_baskets_0_to_n,2)
+	user_baskets_0_to_n			= tf.concat([user_baskets_0_to_n,tf.expand_dims(user_basket_representation,1)],1)
+	user_basket_representation 	= tf.reduce_max(user_baskets_0_to_n,1)
 	
 	## Basic LSTM Cell setup
 	forget_gate 				= tf.exp(tf.add(tf.matmul(user_basket_representation,W_1_f),tf.matmul(prev_hidden_layer,W_h_f)))
@@ -57,7 +62,7 @@ for n in range(number_of_time_steps - 1):
 
 	## Predicted Basket and Actual Basket Differences
 	user_new_basket_prediction 	= tf.exp(tf.matmul(user_preference,tf.transpose(product_weights)))
-	user_at_time_n1 			= tf.squeeze(tf.slice(input_data,[0,n+1,0,0],[-1,1,-1,1]))
+	user_at_time_n1 			= tf.squeeze(tf.slice(input_data,[0,n+1,0,0],[-1,1,-1,1]),[1,3])
 
 	## Cost function sum(Square(Y_u_i_pred - Y_u_i_actual))
 	cost 						= tf.add(cost,tf.reduce_sum(tf.square(tf.subtract(user_new_basket_prediction,user_at_time_n1))))
@@ -77,16 +82,23 @@ sess 	= tf.InteractiveSession()
 init_op = tf.global_variables_initializer()
 sess.run(init_op)
 
-## Iterate training
-for n in range(100):
-	# if(n % 10):
-		# print(sess.run(cost,feed_dict = {input_data:in_data}))
-	sess.run(train_step,feed_dict = {input_data:in_data})
+def print_error():
+	print(sess.run(cost,feed_dict = {input_data:in_data[0:1,:,:,:]}))
+
+def train_graph(cycles,print_cycle):		
+	## Iterate training
+	for n in range(cycles):
+		# if(n % print_cycle):
+		# 	print(sess.run(cost,feed_dict = {input_data:in_data}))
+		sess.run(train_step,feed_dict = {input_data:in_data})
+		print(ran)
+		break
 
 
-writer 	= tf.summary.FileWriter('logs',sess.graph)
-saver 	= tf.train.Saver()
-saver.save(sess,"./model/DREAM")
-print(sess.run(cost,feed_dict = {input_data:in_data}))
+	writer 	= tf.summary.FileWriter('logs',sess.graph)
+	saver 	= tf.train.Saver()
+	saver.save(sess,"./model/DREAM")
+	print(sess.run(cost,feed_dict = {input_data:in_data}))
 
-
+print_error()
+# train_graph(100,100)
