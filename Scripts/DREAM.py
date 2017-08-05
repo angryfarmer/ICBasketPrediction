@@ -1,9 +1,13 @@
 import tensorflow as tf
 import numpy as np
+import importlib.util
+spec = importlib.util.spec_from_file_location("data_importer", "Data_Processing\\data_importer.py")
+data_importer = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(data_importer)
 
 
 ## Load input basket data
-in_data = np.load('..\\Processed_Data\\instacart_data_input.npy')
+data_loader = data_importer.data_importer('..\\Processed_Data\\user_baskets',load_batch = 30)
 
 ## Input dimension sizes
 in_dims						= np.load('..\\Processed_Data\\input_dims.npy')
@@ -92,53 +96,28 @@ init_op = tf.global_variables_initializer()
 sess.run(init_op)
 
 def print_error():
-	print(sess.run(cost,feed_dict = {input_data:in_data[0:2,:,:,:]}))
+	print(sess.run(cost,feed_dict = {input_data:data_loader.next_training_sample()}))
 
 def aggregate_error(steps):
 	err = 0
-	for users in range(int(number_of_users / steps + steps)):
-		# print(users)
-		err += sess.run(cost,feed_dict = {input_data:in_data[users:(users+steps),:,:,:]})
-		# print(sess.run(cost,feed_dict = {input_data:in_data[users:(users+steps),:,:,:]}))
+	while(not data_loader.end_of_file):
+		err += sess.run(cost,feed_dict = {input_data:data_loader.next_training_sample()})
 	return err
 
 def train_graph(cycles,print_cycle,steps):		
-	# f = open('output.txt','w')
-	# f.write(str(sess.run(grads_and_vars,feed_dict = {input_data:in_data[0:1,:,:,:]})))
-	# f.close()
-
-	# print(sess.run(W_1_o))
-	# print(sess.run(W_1_i))
-	# print(sess.run(W_1_f))
-	# print(sess.run(W_1_c))
-	# print(sess.run(W_h_o))
-	# print(sess.run(W_h_i))
-	# print(sess.run(W_h_f))
-	# print(sess.run(W_h_c))
-
 	## Iterate training
 	for n in range(cycles):
 		# print(n)
 		if((n % print_cycle) == 0):
-			print(n)
-			print(aggregate_error(1))
-			# print(sess.run(W_1_o))
-			# print(sess.run(W_1_i))
-			# print(sess.run(W_1_f))
-			# print(sess.run(W_1_c))
-			# print(sess.run(W_h_o))
-			# print(sess.run(W_h_i))
-			# print(sess.run(W_h_f))
-			# print(sess.run(W_h_c))
+			print("Train Step: {}, Error = {}".format(n,aggregate_error(1)))
 		for users in range(int(number_of_users / steps + steps)):
 			sess.run(train_step,feed_dict = {input_data:in_data[users:(users+steps),:,:,:]})
 
-
-
 	writer 	= tf.summary.FileWriter('logs',sess.graph)
 	saver 	= tf.train.Saver()
-	saver.save(sess,"./model/DREAM")
-	# print(sess.run(cost,feed_dict = {input_data:in_data}))
+	saver.save(sess,"./model/DREAM")	
+	print("Final Error: {}".format(aggregate_error(1)))
 
+# train_graph(30,10,1)
 # print_error()
-train_graph(30,10,1)
+print(sess.run(aggregate_error(1)))

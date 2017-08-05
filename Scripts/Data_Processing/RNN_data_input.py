@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import os
-import tables
 import h5py
 
 Test_Set = True
@@ -121,5 +120,11 @@ def test_file():
 		print(np.sum(h5f[dataset_name][user:user+1,:,:,:]))
 	h5f.close()
 
-generate_file()
-test_file()
+def quick_test():
+	h5f = h5py.File(data_file_path,'a')
+	print(h5f[dataset_name].shape)
+	print(np.shape(h5f[dataset_name][54:55]))
+
+# generate_file()
+# test_file()
+quick_test()
