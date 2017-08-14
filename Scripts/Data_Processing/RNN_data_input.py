@@ -12,6 +12,8 @@ test_set_path = "..\\..\\Processed_Data\\test_set"
 train_set_name = "train_set"
 val_set_name = "val_set"
 test_set_name = "test_set"
+val_user_set_name = "val_users"
+test_user_set_name = "test_users"
 
 if(not Test_Set):
 	##### Training Data #####
@@ -104,7 +106,7 @@ def save_user_to_file(user,user_basket,dataset_name):
 	sum_days = np.sum(h5f[dataset_name][user-1:user,:,0,1])
 	sum_total_days = np.sum(h5f[dataset_name][user-1:user,:,:,1:])
 
-	print("User: {}, Sum Check {}, Features: {}, {}, {}".format(user,sum_user,sum_total_days/sum_days/number_of_products,sum_days,sum_total_days))
+	# print("User: {}, Sum Check {}, Features: {}, {}, {}".format(user,sum_user,sum_total_days/sum_days/number_of_products,sum_days,sum_total_days))
 	# print(h5f[dataset_name][user-1:user,:,0,1])
 	h5f.close()
 
@@ -159,8 +161,13 @@ def generate_val_set():
 	val_df = pd.merge(orders_df[(orders_df.eval_set == 'train')],order_products_df,on = 'order_id',how = 'left')	
 	val_df = val_df[val_df.product_id.notnull()]
 	h5f = h5py.File(data_file_path,'a')
+	h5f.__delitem__(val_set_name)
+	h5f.__delitem__(val_user_set_name)
 	h5f.create_dataset(val_set_name,user_shape,maxshape = (None,1,number_of_products,total_features),chunks = user_shape,compression = "gzip",compression_opts = 9)
 	h5f.close()
+
+	## Initialize Array to capture users in the val set
+	val_users = np.zeros(number_of_users)
 
 	## Initialize Basket
 	user_basket = np.zeros(user_shape)
@@ -168,12 +175,18 @@ def generate_val_set():
 	## Run through data frame
 	user = 1
 	for index,item_order in val_df.iterrows():
+		## Add user from order to the val set
+		val_users[int(item_order.user_id - 1)] = 1
+		print(int(item_order.user_id))
+		# print(val_users[int(item_order.user_id-1)])
+
+		##Action when user changes
 		if(not int(item_order.user_id) == user):
 			## Save User And Reset For Next User. Works due to monotonicity of user_id in dataframe
 			save_user_to_file(user,user_basket,val_set_name)
 			user_basket = np.zeros(user_shape)
 			
-			## Used for Filling in Gaps Due to Test Set
+			## Used for Filling in Gaps if user does not make an order in this set
 			for n in range(int(item_order.user_id) - user - 1):
 				save_user_to_file(user + n + 1,user_basket,val_set_name)
 				user_basket = np.zeros(user_shape)
@@ -181,7 +194,7 @@ def generate_val_set():
 			## Move to next user index
 			user = int(item_order.user_id)
 
-		## Condition exists due to test set's sparse data
+		## Condition exists due to script testing set data
 		if(np.isnan(item_order.product_id) or item_order.product_id > number_of_products):
 			pass
 		else:
@@ -191,6 +204,10 @@ def generate_val_set():
 	save_user_to_file(user,user_basket,val_set_name)
 	user_basket = np.zeros(user_shape)
 
+	## Save val users
+	h5f = h5py.File(data_file_path,'a')
+	h5f.create_dataset(val_user_set_name,data = val_users)
+	h5f.close()
 	## Append user data due to sparse test set
 	for n in range(int(number_of_users) - user - 1):
 		save_user_to_file(user + n + 1,user_basket,val_set_name)
@@ -204,12 +221,18 @@ def generate_test_set():
 	h5f.create_dataset(test_set_name,user_shape,maxshape = (None,1,number_of_products,total_features),chunks = user_shape,compression = "gzip",compression_opts = 9)
 	h5f.close()
 
+	## Initialize Array to capture users in the test set
+	test_users = np.zeros(number_of_users)
+
 	## Initialize Basket
 	user_basket = np.zeros(user_shape)
 
 	## Run through data frame
 	user = 1
 	for index,item_order in test_df.iterrows():
+		## Add order user to test set
+		test_users[int(item_order.user_id - 1)] = 1
+
 		if(not int(item_order.user_id) == user):
 			## Save User And Reset For Next User. Works due to monotonicity of user_id in dataframe
 			save_user_to_file(user,user_basket,test_set_name)
@@ -229,10 +252,16 @@ def generate_test_set():
 	save_user_to_file(user,user_basket,test_set_name)
 	user_basket = np.zeros(user_shape)
 
+	## Save val users
+	h5f = h5py.File(data_file_path,'a')
+	h5f.create_dataset(test_user_set_name,data = test_users)
+	h5f.close()
+
 	## Append user data due to sparse test set
 	for n in range(int(number_of_users) - user - 1):
-		save_user_to_file(user + n + 1,user_basket,train_set_name)
+		save_user_to_file(user + n + 1,user_basket,test_set_name)
 		user_basket = np.zeros(user_shape)
+
 
 ## Test Data File
 def testing_file():
@@ -266,16 +295,35 @@ def testing_file():
 
 	h5f.close()
 
+def test_user_list():
+	h5f = h5py.File(data_file_path,'a')
+	test_users = h5f[test_user_set_name]
+	test_set = h5f[test_set_name]
+	val_users = h5f[val_user_set_name]
+	val_set = h5f[val_set_name]
+
+	for n in range(test_set.shape[0]):
+		test_sum = np.sum(test_set[n,:,:,1])
+		test_user_fail = ( test_sum > 0 and int(test_users[n]) == 0 ) or (int(test_sum) == 0  and test_users[n] > 0)
+		val_sum = np.sum(val_set[n,:,:,0])
+		val_user_fail = ( val_sum > 0 and int(val_users[n]) == 0 ) or (int(val_sum) == 0  and val_users[n] > 0)
+		if(val_user_fail or test_user_fail):
+
+			print("n: {}, Val: {}, Test: {}".format(n,val_user_fail,test_user_fail))
+
+
+
 def quick_test():
 	h5f = h5py.File(data_file_path,'a')
 	print("Train Shape: {}, Val Shape: {}, Test Shape: {}".format(h5f[train_set_name].shape,h5f[val_set_name].shape,h5f[test_set_name].shape))
 	# print(np.shape(h5f[train_set_name][54:55]))
 
-generate_train_set()
-print("++++++++")
-generate_val_set()
-print("++++++++")
-generate_test_set()
+# generate_train_set()
+# print("++++++++")
+# generate_val_set()
+# print("++++++++")
+# generate_test_set()
 
-quick_test()
-testing_file()
+# quick_test()
+# testing_file()
+test_user_list()
