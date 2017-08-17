@@ -77,7 +77,33 @@ class data_importer():
 		self.end_of_file = False
 
 
-test = True
+test2 = False
+if(test2):
+	data_file_path = "..\\..\\Processed_Data\\user_baskets"
+	data = data_importer(data_file_path,load_batch = 30,include_val = True)
+	# print(np.sum(data.h5f_val[:,:,:,0]))
+	user_indices = np.reshape(np.nonzero(data.val_users),-1)
+	tot = 0
+	tot2 = 0
+	# print(np.shape(user_indices))
+	for n in range(np.shape(user_indices)[0]):
+		# print(user_indices[n])
+		temp = data.h5f_train[int(user_indices[n]):int(user_indices[n]+1),:,:,0]
+		if(np.isnan(np.sum(temp))):
+			print("N: {}, SUM: {}".format(n,np.sum(temp)))
+	# 	tot2 += np.sum(temp)
+	# 	tot += np.sum(np.amax(temp,axis = 1))
+	# print(tot)
+	# print(tot2)
+
+	# tot = 0
+	# while(not data.end_of_file):
+	# 	tot += np.sum(np.amax(data.next_training_sample()[:,:-1,:,0],axis = 1))
+	# 	print(tot)
+
+	# print(tot)
+	# print(np.sum(np.amax(data.h5f_train[1:,:,:,0],axis = 1)))
+test = False
 if(test):	
 	data_file_path = "..\\..\\Processed_Data\\user_baskets"
 

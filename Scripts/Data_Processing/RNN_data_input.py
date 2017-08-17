@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import h5py
 
-Test_Set = True
+Test_Set = False
 product_features = 1
 inpath_str = "..\\..\\Data\\"
 data_file_path = "..\\..\\Processed_Data\\user_baskets"
@@ -30,8 +30,12 @@ else:
 	##### Test Data #####
 	aisles_df               = pd.read_csv(inpath_str + 'aisles.csv',nrows = 1000)
 	departments_df          = pd.read_csv(inpath_str + 'departments.csv',nrows = 1000)
-	order_products_prior_df = pd.read_csv(inpath_str + 'order_products__prior.csv',nrows = 500000)
-	order_products_train_df = pd.read_csv(inpath_str + 'order_products__train.csv',nrows = 500000)
+	# order_products_prior_df = pd.read_csv(inpath_str + 'order_products__prior.csv',nrows = 500000)
+	# order_products_train_df = pd.read_csv(inpath_str + 'order_products__train.csv',nrows = 500000)
+	order_products_prior_df = pd.read_csv(inpath_str + 'order_products__prior.csv',chunksize = 500000)
+	order_products_prior_df = pd.concat(order_products_prior_df,ignore_index = True)
+	order_products_train_df = pd.read_csv(inpath_str + 'order_products__train.csv',chunksize = 500000)
+	order_products_train_df = pd.concat(order_products_train_df, ignore_index = True)
 	order_products_df 		= pd.concat([order_products_prior_df,order_products_train_df],ignore_index = True)
 	orders_df               = pd.read_csv(inpath_str + 'orders.csv')
 	orders_df 				= orders_df[orders_df.user_id < 200]
@@ -81,9 +85,15 @@ def product_in_basket(order,user_basket,single_item_order = False):
 		if(user_basket[0,time_step,0,index + product_features] > 0 and index + product_features == 1):
 			pass
 		else:
-			user_basket[0,time_step,:,index + product_features] = order[feature]
+			if(int(order.order_number) >= 2):
+				# print("First Order: {}".format(order[feature]))
+				user_basket[0,time_step,:,index + product_features] = order[feature]
+			else:
+				# print("First Order: {}".format(order[feature]))
+				user_basket[0,time_step,:,index + product_features] = 1
+
 	## Add product to user at timestep (order.order_number-1)
-	user_basket[0,time_step,int(order.product_id - 1),:] = product_initalizer
+	user_basket[0,time_step,int(order.product_id - 1),:product_features] = product_initalizer[:product_features]
 
 ## Function to add days since last order
 def add_days_since_last_order(order,user_basket,single_item_order = False):
@@ -102,9 +112,9 @@ def save_user_to_file(user,user_basket,dataset_name):
 	h5f[dataset_name].resize(user,axis = 0)
 	h5f[dataset_name][user-1:user,:,:,:] = user_basket
 
-	sum_user = np.sum(h5f[dataset_name][user-1:user,:,:,:])
-	sum_days = np.sum(h5f[dataset_name][user-1:user,:,0,1])
-	sum_total_days = np.sum(h5f[dataset_name][user-1:user,:,:,1:])
+	# sum_user = np.sum(h5f[dataset_name][user-1:user,:,:,:])
+	# sum_days = np.sum(h5f[dataset_name][user-1:user,:,0,1])
+	# sum_total_days = np.sum(h5f[dataset_name][user-1:user,:,:,1:])
 
 	# print("User: {}, Sum Check {}, Features: {}, {}, {}".format(user,sum_user,sum_total_days/sum_days/number_of_products,sum_days,sum_total_days))
 	# print(h5f[dataset_name][user-1:user,:,0,1])
@@ -161,8 +171,8 @@ def generate_val_set():
 	val_df = pd.merge(orders_df[(orders_df.eval_set == 'train')],order_products_df,on = 'order_id',how = 'left')	
 	val_df = val_df[val_df.product_id.notnull()]
 	h5f = h5py.File(data_file_path,'a')
-	h5f.__delitem__(val_set_name)
-	h5f.__delitem__(val_user_set_name)
+	# h5f.__delitem__(val_set_name)
+	# h5f.__delitem__(val_user_set_name)
 	h5f.create_dataset(val_set_name,user_shape,maxshape = (None,1,number_of_products,total_features),chunks = user_shape,compression = "gzip",compression_opts = 9)
 	h5f.close()
 
@@ -177,7 +187,7 @@ def generate_val_set():
 	for index,item_order in val_df.iterrows():
 		## Add user from order to the val set
 		val_users[int(item_order.user_id - 1)] = 1
-		print(int(item_order.user_id))
+		# print(int(item_order.user_id))
 		# print(val_users[int(item_order.user_id-1)])
 
 		##Action when user changes
@@ -282,6 +292,8 @@ def testing_file():
 				# print(order.user_id)
 				print("Val DSPO Error at: {}, Diff = {}".format(int(order.user_id),np.sum(h5f[val_set_name][int(order.user_id - 1),0,:,1] - order.days_since_prior_order)))
 		if(order.eval_set == 'prior'):
+			# print(order.order_number)
+			# print(np.sum(np.abs(h5f[train_set_name][int(order.user_id - 1),time_step,:,1])))
 			if(h5f[train_set_name][int(order.user_id - 1),time_step,int(order.product_id - 1),0] < 1):
 				print("Train Product Error at: {}".format((int(order.user_id),time_step,int(order.product_id - 1),0)))
 			if(np.sum(np.abs(h5f[train_set_name][int(order.user_id - 1),time_step,:,1] - order.days_since_prior_order)) > 0):
@@ -318,12 +330,12 @@ def quick_test():
 	print("Train Shape: {}, Val Shape: {}, Test Shape: {}".format(h5f[train_set_name].shape,h5f[val_set_name].shape,h5f[test_set_name].shape))
 	# print(np.shape(h5f[train_set_name][54:55]))
 
-# generate_train_set()
-# print("++++++++")
-# generate_val_set()
-# print("++++++++")
-# generate_test_set()
+generate_train_set()
+print("++++++++")
+generate_val_set()
+print("++++++++")
+generate_test_set()
 
-# quick_test()
-# testing_file()
+quick_test()
+testing_file()
 test_user_list()
