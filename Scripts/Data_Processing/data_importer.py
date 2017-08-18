@@ -76,8 +76,10 @@ class data_importer():
 		self.next_load_batch()
 		self.end_of_file = False
 
-
+test = False
 test2 = False
+# test2 = True
+# test = True
 if(test2):
 	data_file_path = "..\\..\\Processed_Data\\user_baskets"
 	data = data_importer(data_file_path,load_batch = 30,include_val = True)
@@ -103,7 +105,7 @@ if(test2):
 
 	# print(tot)
 	# print(np.sum(np.amax(data.h5f_train[1:,:,:,0],axis = 1)))
-test = False
+
 if(test):	
 	data_file_path = "..\\..\\Processed_Data\\user_baskets"
 
