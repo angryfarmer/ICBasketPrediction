@@ -100,10 +100,17 @@ def setup_DSPO():
 	print("Done Resizing")
 	
 	print("Initialize Values with 0")
-	for n in range(number_of_users):
-		h5f[train_set_name][n:n+1] = np.zeros(user_shape)
-		h5f[val_set_name][n:n+1] = np.zeros((1,1,number_of_products,total_features))
-		h5f[test_set_name][n:n+1] = np.zeros((1,1,number_of_products,total_features))
+	n = 0
+	batch = 100
+	while n < number_of_users:
+		if(n + batch >= number_of_users):
+			batch = number_of_users - n
+		if(n % 500 == 0):
+			print("{} users initialized".format(n))
+		h5f[train_set_name][n:n+batch] = np.zeros((batch,time_steps,number_of_products,total_features))
+		h5f[val_set_name][n:n+batch] = np.zeros((batch,1,number_of_products,total_features))
+		h5f[test_set_name][n:n+batch] = np.zeros((batch,1,number_of_products,total_features))
+		n += batch
 	print("Done Initializing")
 
 	print("Add DSPO")
@@ -121,7 +128,7 @@ def setup_DSPO():
 			if(order.eval_set == val):
 				h5f[val_set_name][user:user+1,time_step:time_step+1,:,1:2] = DSPO
 				h5f[val_user_set_name][user] = np.array(1)
-				print("USer: {}, DSPO: {}".format(user,DSPO[0,0,0,0]))
+				# print("USer: {}, DSPO: {}".format(user,DSPO[0,0,0,0]))
 			if(order.eval_set == test):
 				h5f[test_set_name][user:user+1,time_step:time_step+1,:,1:2] = DSPO
 				h5f[test_user_set_name][user] = np.array(1)
