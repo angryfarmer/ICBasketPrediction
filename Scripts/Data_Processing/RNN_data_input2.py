@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import os
 import h5py
+import time
 
 Tst = False
 Tst = True
@@ -102,11 +103,14 @@ def setup_DSPO():
 	print("Initialize Values with 0")
 	n = 0
 	batch = 100
+	start = time.time()
 	while n < number_of_users:
 		if(n + batch >= number_of_users):
 			batch = number_of_users - n
 		if(n % 500 == 0):
-			print("{} users initialized".format(n))
+			
+			print("{} users initialized. Time since last update: {}".format(n,(time.time() - start)))
+			start = time.time()
 		h5f[train_set_name][n:n+batch] = np.zeros((batch,time_steps,number_of_products,total_features))
 		h5f[val_set_name][n:n+batch] = np.zeros((batch,1,number_of_products,total_features))
 		h5f[test_set_name][n:n+batch] = np.zeros((batch,1,number_of_products,total_features))
@@ -114,7 +118,13 @@ def setup_DSPO():
 	print("Done Initializing")
 
 	print("Add DSPO")
-	for _,order in orders_df.iterrows():
+	start = time.time()
+	n = 0
+	for order in orders_df.itertuples():
+		if(n % 10000 == 0):	
+			print("{} DSPOs Added. Time since last update: {}".format(n,(time.time() - start)))
+			start = time.time()
+		n += 1
 		user = int(order.user_id - 1)
 		if(order.eval_set == train):
 			time_step = time_steps - 1 - int(user_number_of_orders[order.user_id] - 1) + int(order.order_number - 1)
@@ -139,13 +149,15 @@ def setup_product_orders():
 	h5f = h5py.File(data_file_path,'a')
 	n = 0
 	fill_value = np.array(1)
+	start = time.time()
 	for chunk in order_products_prior_df:
 		n += 1
-		print("Looping Through Chunk {}".format(n))
+		print("Looping Through prior_df Chunk {}. Time since last chunk: {}".format(n,time.time() - start))
+		start = time.time()
 		# print(chunk.head())
 		product_order_df = pd.merge(chunk,orders_df,on = 'order_id',how = 'left')
 		product_order_df = product_order_df[product_order_df.user_id.notnull()]
-		for _,product_order in product_order_df.iterrows():
+		for product_order in product_order_df.itertuples():
 			# print(product_order)
 			user = int(product_order.user_id - 1)
 			product = int(product_order.product_id - 1)
@@ -159,12 +171,14 @@ def setup_product_orders():
 				h5f[val_set_name][user,time_step,product,0] = fill_value
 		if(Tst):
 			break
+	n = 0
 	for chunk in order_products_train_df:
 		n += 1
-		print("Looping Through Chunk {}".format(n))
+		print("Looping Through train_df Chunk {}. Time since last chunk: {}".format(n,time.time() - start))
+		start = time.time()
 		product_order_df = pd.merge(chunk,orders_df,on = 'order_id',how = 'left')
 		product_order_df = product_order_df[product_order_df.user_id.notnull()]
-		for _,product_order in product_order_df.iterrows():
+		for product_order in product_order_df.itertuples():
 			user = int(product_order.user_id - 1)
 			product = int(product_order.product_id - 1)
 			if(product_order.eval_set == train):
