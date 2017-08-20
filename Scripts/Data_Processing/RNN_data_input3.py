@@ -76,7 +76,7 @@ total_features 			= product_features + order_features
 ## Print and Save Constants
 print("Number of products: {}, Number of Users:{}, Time Steps:{}".format(number_of_products,number_of_users,time_steps))
 total_data_shape = [number_of_users,time_steps,number_of_products,total_features]
-user_shape = (1,time_steps,number_of_products,total_features)
+user_shape = (1,time_steps,number_of_products,1)
 user_val_shape = (1,1,number_of_products,1)
 np.save('../../Processed_Data/input_dims',total_data_shape)
 
@@ -91,9 +91,9 @@ def initialize_data():
 	print("Creating Data Sets")
 	open(data_file_path,'w').close()
 	h5f = h5py.File(data_file_path,'a',libver = 'latest')
-	h5f.create_dataset(train_set_name,user_shape,maxshape = (None,time_steps,number_of_products,total_features),chunks = user_shape,compression = "gzip",compression_opts = 9)
-	h5f.create_dataset(val_set_name,(1,1,number_of_products,total_features),maxshape = (None,1,number_of_products,total_features),chunks = (1,1,number_of_products,total_features),compression = "gzip",compression_opts = 9)
-	h5f.create_dataset(test_set_name,(1,1,number_of_products,total_features),maxshape = (None,1,number_of_products,total_features),chunks = (1,1,number_of_products,total_features),compression = "gzip",compression_opts = 9)
+	h5f.create_dataset(train_set_name,user_shape,maxshape = (None,time_steps,number_of_products,1),chunks = user_shape,compression = "gzip",compression_opts = 9)
+	h5f.create_dataset(val_set_name,(1,1,number_of_products,1),maxshape = (None,1,number_of_products,1),chunks = (1,1,number_of_products,1),compression = "gzip",compression_opts = 9)
+	h5f.create_dataset(test_set_name,(1,1,number_of_products,1),maxshape = (None,1,number_of_products,1),chunks = (1,1,number_of_products,1),compression = "gzip",compression_opts = 9)
 	h5f.create_dataset(val_user_set_name,data = np.zeros(number_of_users),compression = "gzip",compression_opts = 9)
 	h5f.create_dataset(test_user_set_name,data = np.zeros(number_of_users),compression = "gzip",compression_opts = 9)
 
@@ -117,7 +117,7 @@ def initialize_data():
 			print("{} users initialized. Time since last update: {}".format(n,(time.time() - start)))
 			start = time.time()
 		zero_time = time.time()
-		init = np.zeros((batch,time_steps,number_of_products,total_features))
+		init = np.zeros((batch,time_steps,number_of_products,1))
 		print("{} Numpy Zeros Time".format(time.time()-zero_time))
 		h5f_time = time.time()
 		h5f[train_set_name][n:n+batch] = init
@@ -130,12 +130,13 @@ def initialize_data():
 
 def setup_DSPO():
 	print("Add DSPO")
-	DSPO_shape = (number_of_users,time_steps)
-	init_data = np.zeros(DSPO_shape)
+
+	init_data = np.zeros((number_of_users,time_steps))
+	init_val_and_test = np.zeros((number_of_users,1))
 	h5f = h5py.File(data_file_path,'a',libver = 'latest')
 	h5f.create_dataset(train_DSPO_set,data = init_data,compression = "gzip",compression_opts = 9)
-	h5f.create_dataset(val_DSPO_set,data = init_data,compression = "gzip",compression_opts = 9)
-	h5f.create_dataset(test_DSPO_set,data = init_data,compression = "gzip",compression_opts = 9)
+	h5f.create_dataset(val_DSPO_set,data = init_val_and_test,compression = "gzip",compression_opts = 9)
+	h5f.create_dataset(test_DSPO_set,data = init_val_and_test,compression = "gzip",compression_opts = 9)
 
 	start = time.time()
 	n = 0
@@ -152,16 +153,15 @@ def setup_DSPO():
 		else:
 			time_step = 0
 		if(order.order_number > 1):
-			DSPO = np.ones(user_val_shape)
-			DSPO[:] = order.days_since_prior_order
+			DSPO = np.array(order.days_since_prior_order)
 			if(order.eval_set == train):
-				h5f[train_set_name][user:user+1,time_step:time_step+1,:,1:2] = DSPO
+				h5f[train_DSPO_set][user,time_step] = DSPO
 			if(order.eval_set == val):
-				h5f[val_set_name][user:user+1,time_step:time_step+1,:,1:2] = DSPO
+				h5f[val_DSPO_set][user,time_step] = DSPO
 				h5f[val_user_set_name][user] = np.array(1)
 				# print("USer: {}, DSPO: {}".format(user,DSPO[0,0,0,0]))
 			if(order.eval_set == test):
-				h5f[test_set_name][user:user+1,time_step:time_step+1,:,1:2] = DSPO
+				h5f[test_DSPO_set][user,time_step] = DSPO
 				h5f[test_user_set_name][user] = np.array(1)
 	print("Done Adding DSPO. Time Since Last Update: {}".format(time.time()-start))
 
@@ -231,36 +231,36 @@ def testing_file():
 		if(order.eval_set == 'train'):
 			if(h5f[val_set_name][int(order.user_id - 1),0,int(order.product_id - 1),0] < 1):
 				print("Val Product Error at: {}".format((int(order.user_id),0,int(order.product_id - 1),0)))
-			if(np.sum(np.abs(h5f[val_set_name][int(order.user_id - 1),0,:,1] - order.days_since_prior_order)) > 0):
+			if(np.sum(np.abs(h5f[val_DSPO_set][int(order.user_id - 1),0] - order.days_since_prior_order)) > 0):
 				# print(order.user_id)
-				print("Val DSPO Error at: {}, Diff = {}".format(int(order.user_id),np.sum(h5f[val_set_name][int(order.user_id - 1),0,:,1] - order.days_since_prior_order)))
+				print("Val DSPO Error at: {}, Diff = {}".format(int(order.user_id),np.sum(h5f[val_DSPO_set][int(order.user_id - 1),0] - order.days_since_prior_order)))
 		if(order.eval_set == 'prior'):
 			# print(order.order_number)
 			# print(np.sum(np.abs(h5f[train_set_name][int(order.user_id - 1),time_step,:,1])))
 			if(h5f[train_set_name][int(order.user_id - 1),time_step,int(order.product_id - 1),0] < 1):
 				print("Train Product Error at: {}".format((int(order.user_id),time_step,int(order.product_id - 1),0)))
-			if(np.sum(np.abs(h5f[train_set_name][int(order.user_id - 1),time_step,:,1] - order.days_since_prior_order)) > 0):
-				print("Train DSPO Error at: {}, Diff = {}".format((int(order.user_id),order.order_number),np.sum(h5f[train_set_name][int(order.user_id - 1),time_step,:,1] - order.days_since_prior_order)))
+			if(np.sum(np.abs(h5f[train_DSPO_set][int(order.user_id - 1),time_step] - order.days_since_prior_order)) > 0):
+				print("Train DSPO Error at: {}, Diff = {}".format((int(order.user_id),order.order_number),np.sum(h5f[train_DSPO_set][int(order.user_id - 1),time_step] - order.days_since_prior_order)))
 
 	test_df = orders_df[(orders_df.eval_set == 'test')]	
 	for _,order in test_df.iterrows():
 		if(order.eval_set == 'test'):
-			if(np.sum(np.abs(h5f[test_set_name][int(order.user_id - 1),0,:,1] - order.days_since_prior_order)) > 0):
-				print("Test DSPO Error at: {}, Diff = {}".format(int(order.user_id),np.sum(h5f[test_set_name][int(order.user_id - 1),0,:,1] - order.days_since_prior_order)))
+			if(np.sum(np.abs(h5f[test_DSPO_set][int(order.user_id - 1),0] - order.days_since_prior_order)) > 0):
+				print("Test DSPO Error at: {}, Diff = {}".format(int(order.user_id),np.sum(h5f[test_DSPO_set][int(order.user_id - 1),0] - order.days_since_prior_order)))
 
 	h5f.close()
 
 def test_user_list():
 	h5f = h5py.File(data_file_path,'a')
 	test_users = h5f[test_user_set_name]
-	test_set = h5f[test_set_name]
+	test_set = h5f[test_DSPO_set]
 	val_users = h5f[val_user_set_name]
-	val_set = h5f[val_set_name]
+	val_set = h5f[val_DSPO_set]
 
 	for n in range(test_set.shape[0]):
-		test_sum = np.sum(test_set[n,:,:,1])
+		test_sum = np.sum(test_set[n,:])
 		test_user_fail = ( test_sum > 0 and int(test_users[n]) == 0 ) or (int(test_sum) == 0  and test_users[n] > 0)
-		val_sum = np.sum(val_set[n,:,:,1])
+		val_sum = np.sum(val_set[n,:])
 		val_user_fail = ( val_sum > 0 and int(val_users[n]) == 0 ) or (int(val_sum) == 0  and val_users[n] > 0)
 		if(val_user_fail or test_user_fail):
 		# if(True):	
@@ -273,10 +273,11 @@ def quick_test():
 	print("Train Shape: {}, Val Shape: {}, Test Shape: {}".format(h5f[train_set_name].shape,h5f[val_set_name].shape,h5f[test_set_name].shape))
 	# print(np.shape(h5f[train_set_name][54:55]))
 
+initialize_data()
 setup_DSPO()
 setup_product_orders()
 
-# print("Testing")
-# quick_test()
-# testing_file()
-# test_user_list()
+print("Testing")
+quick_test()
+testing_file()
+test_user_list()
