@@ -4,6 +4,9 @@ import h5py
 train_set_name = "train_set"
 val_set_name = "val_set"
 test_set_name = "test_set"
+train_DSPO_set = "train_DSPO"
+val_DSPO_set = "val_DSPO"
+test_DSPO_set = "test_DSPO"
 val_user_set_name = "val_users"
 test_user_set_name = "test_users"
 
@@ -18,6 +21,9 @@ class data_importer():
 		self.h5f_test = h5py.File(data_file_path,'r')[test_set_name]
 		self.val_users = h5py.File(data_file_path,'r')[val_user_set_name]
 		self.test_users = h5py.File(data_file_path,'r')[test_user_set_name]
+		self.train_DSPO = h5py.File(data_file_path,'r')[train_DSPO_set]
+		self.val_DSPO = h5py.File(data_file_path,'r')[val_DSPO_set]
+		self.test_DSPO = h5py.File(data_file_path,'r')[test_DSPO_set]
 		self.current_load_index = 0
 		self.current_train_index = 0
 		self.load_batch = load_batch
@@ -25,9 +31,13 @@ class data_importer():
 		self.next_load_batch()
 		self.end_of_file = False
 	def next_load_batch(self):
-			self.batch_val_users = self.val_users[self.current_load_index:self.current_load_index+self.load_batch]
-			self.batch_test_users = self.test_users[self.current_load_index:self.current_load_index+self.load_batch]
-			self.current_load_batch = self.h5f_train[self.current_load_index:self.current_load_index+self.load_batch]
+			self.batch_val_users = self.val_users[self.current_load_index:self.current_load_index+self.load_batch,:,:,0:1]
+			self.batch_test_users = self.test_users[self.current_load_index:self.current_load_index+self.load_batch,:,:,0:1]
+			self.current_load_batch = self.h5f_train[self.current_load_index:self.current_load_index+self.load_batch,:,:,0:1]
+			self.current_DSPO_batch = self.train_DSPO[self.current_load_index:self.current_load_index+self.load_batch]
+			self.batch_val_DSPO = self.val_DSPO[self.current_load_index:self.current_load_index+self.load_batch]
+			self.batch_test_DSPO = self.test_DSPO[self.current_load_index:self.current_load_index+self.load_batch]
+
 			# print("Shape: {}".format(np.shape(self.h5f_val)))
 			if(self.include_val):
 				for n in range(np.shape(self.current_load_batch)[0]):
@@ -35,34 +45,43 @@ class data_importer():
 						# print("Batch: {},{}, Current Load Batch Shape: {}, Current Val Shape: {}".format(n,self.current_load_index+n,np.shape(self.current_load_batch[n:n+1,1:,:,:]),np.shape(self.h5f_val[self.current_load_index+n:self.current_load_index+n+1,:,:,:])))
 
 						self.current_load_batch[n:n+1,:,:,:] = np.concatenate((self.current_load_batch[n:n+1,1:,:,:],self.h5f_val[self.current_load_index+n:self.current_load_index+n+1,:,:,:]),axis = 1)
+						self.current_DSPO_batch[n:n+1,:] = np.concatenate((self.current_DSPO_batch[n:n+1,1:],self.batch_val_DSPO[self.current_load_index+n:self.current_load_index+n+1,:]),axis = 1)
 			if(self.include_test):
 				for n in range(np.shape(self.current_load_batch)[0]):
 					if(self.batch_test_users[n] > 0):	
 						# print(self.current_load_index+n)
 						self.current_load_batch[n:n+1,:,:,:] = np.concatenate((self.current_load_batch[n:n+1,1:,:,:],self.h5f_test[self.current_load_index+n:self.current_load_index+n+1,:,:,:]),axis = 1)
+						self.current_DSPO_batch[n:n+1,:] = np.concatenate((self.current_DSPO_batch[n:n+1,1:],self.batch_test_DSPO[self.current_load_index+n:self.current_load_index+n+1,:]),axis = 1)
 				
 			self.current_train_index = 0
 	def next_training_sample(self):
 		current_train_sample = np.array([])
+		current_DSPO_sample = np.array([])
 		for n in range(self.train_batch):
 			if(self.include_test):
 				if(self.batch_test_users[self.current_train_index+n:self.current_train_index+n+1] > 0):
 					if(current_train_sample.size == 0):
 						current_train_sample = self.current_load_batch[self.current_train_index+n:self.current_train_index+n+1]
+						current_DSPO_sample = self.current_DSPO_batch[self.current_train_index+n:self.current_train_index+n+1]
 					else:
 						current_train_sample = np.concatenate((current_train_sample,self.current_load_batch[self.current_train_index+n:self.current_train_index+n+1]),axis = 0)
+						current_DSPO_sample = np.concatenate((current_DSPO_sample,self.current_DSPO_batch[self.current_train_index+n:self.current_train_index+n+1]),axis = 0)
 			else:
 				if(self.include_val):
 					if(self.batch_val_users[self.current_train_index+n:self.current_train_index+n+1] > 0):
 						if(current_train_sample.size == 0):
 							current_train_sample = self.current_load_batch[self.current_train_index+n:self.current_train_index+n+1]
+							current_DSPO_sample = self.current_DSPO_batch[self.current_train_index+n:self.current_train_index+n+1]
 						else:
 							current_train_sample = np.concatenate((current_train_sample,self.current_load_batch[self.current_train_index+n:self.current_train_index+n+1]),axis = 0)
+							current_DSPO_sample = np.concatenate((current_DSPO_sample,self.current_DSPO_batch[self.current_train_index+n:self.current_train_index+n+1]),axis = 0)
 				else:
 					if(current_train_sample.size == 0):
 						current_train_sample = self.current_load_batch[self.current_train_index+n:self.current_train_index+n+1]
+						current_DSPO_sample = self.current_DSPO_batch[self.current_train_index+n:self.current_train_index+n+1]
 					else:
 						current_train_sample = np.concatenate((current_train_sample,self.current_load_batch[self.current_train_index+n:self.current_train_index+n+1]),axis = 0)
+						current_DSPO_sample = np.concatenate((current_DSPO_sample,self.current_DSPO_batch[self.current_train_index+n:self.current_train_index+n+1]),axis = 0)
 		
 		self.current_train_index += self.train_batch
 		self.current_load_index += self.train_batch
@@ -70,7 +89,7 @@ class data_importer():
 			self.next_load_batch()
 		if(self.current_load_index >= self.h5f_train.shape[0]):
 			self.end_of_file = True
-		return current_train_sample
+		return current_train_sample, current_DSPO_sample
 	def reset_to_head(self):
 		self.current_load_index = 0
 		self.next_load_batch()
