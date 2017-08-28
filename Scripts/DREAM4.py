@@ -10,7 +10,7 @@ spec.loader.exec_module(data_importer)
 
 
 ## Load input basket data
-data_loader = data_importer.data_importer('..\\Processed_Data\\user_baskets',load_batch = 30,train_batch = 1)
+data_loader = data_importer.data_importer('..\\Processed_Data\\user_baskets_loc',load_batch = 30,train_batch = 1)
 
 ## Input dimension sizes
 in_dims						= np.load('..\\Processed_Data\\input_dims.npy')
@@ -127,7 +127,7 @@ number_of_false_negatives = tf.reduce_sum(tf.multiply(tf.where(tf.equal(predicti
 
 ## Training Setup
 Alpha 			= 0.01
-decay_steps 	= 50
+decay_steps 	= 500000
 decay_rate 		= 0.096
 global_step 	= tf.Variable(0,trainable = False,name = "global_step")
 learning_rate 	= tf.train.exponential_decay(Alpha,global_step,decay_steps,decay_rate,staircase = True)
@@ -177,14 +177,15 @@ def train_graph(cycles,print_cycle):
 			start = time.time()
 			in_sample,DSPO_sample,users = data_loader.next_training_sample()
 			end = time.time()
-			# print("Load Sample Time: {}".format(end-start))
+			# print("Cycle: {}, Load Sample Time: {}".format(n,end-start))
 			if(in_sample.size > 0):
 				start = time.time()
 				in_sample = in_sample
 				DSPO_sample = DSPO_sample
 				sess.run(train_step,feed_dict = {input_data:in_sample,input_DSPO:DSPO_sample})
 				end = time.time()
-				# print("Train Step Time: {}".format(end-start))
+				if(data_loader.index % 100 == 0):
+					print("Train Step Time: {}".format(end-start))
 	writer 	= tf.summary.FileWriter('logs',sess.graph)
 	saver 	= tf.train.Saver()
 	saver.save(sess,"..\\model\\DREAM")	
@@ -195,7 +196,7 @@ def val_error():
 	correct = 0
 	false_positives = 0
 	false_negatives = 0
-	val_data_loader = data_importer.data_importer('..\\Processed_Data\\user_baskets',load_batch = 30,include_val = True)
+	val_data_loader = data_importer.data_importer('..\\Processed_Data\\user_baskets_loc',load_batch = 30,include_val = True)
 	estimation_points	= 0
 	true_positives	= 0
 	p_positives = 0

@@ -82,7 +82,7 @@ class data_importer():
 				users = np.array([user_id])
 			else:
 				batch_data = np.concatenate((batch_data,sample),axis = 0)
-				batch_dspo = np.concatenate((batch_dspo,sample),axis = 0)
+				batch_dspo = np.concatenate((batch_dspo,sample_dspo),axis = 0)
 				users = np.concatenate((users,np.array([user_id])))
 			self.index += 1
 		## If we've iterated through all users, mark end of file as true 
