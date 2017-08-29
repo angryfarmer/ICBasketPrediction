@@ -3,17 +3,18 @@
 import time
 import tensorflow as tf
 import numpy as np
+import os
 import importlib.util
-spec = importlib.util.spec_from_file_location("data_importer", "Data_Processing\\data_importer2.py")
+spec = importlib.util.spec_from_file_location("data_importer", 'Data_Processing'+os.sep+'data_importer2.py')
 data_importer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(data_importer)
 
 
 ## Load input basket data
-data_loader = data_importer.data_importer('..\\Processed_Data\\user_baskets_loc',load_batch = 30,train_batch = 15)
+data_loader = data_importer.data_importer('..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc',load_batch = 30,train_batch = 15)
 
 ## Input dimension sizes
-in_dims						= np.load('..\\Processed_Data\\input_dims.npy')
+in_dims						= np.load('..'+os.sep+'Processed_Data'+os.sep+'input_dims.npy')
 number_of_products 			= in_dims[2]
 number_of_data_features 	= in_dims[3]
 data_time_steps 			= in_dims[1]
@@ -141,7 +142,7 @@ load_graph = False
 if(load_graph):
 	sess = tf.Session()
 	saver = tf.train.Saver()
-	saver.restore(sess,"..\\model\\DREAM")
+	saver.restore(sess,'..'+os.sep+'model'+os.sep+'DREAM')
 else:
 	sess 	= tf.InteractiveSession()
 	init_op = tf.global_variables_initializer()
@@ -189,7 +190,7 @@ def train_graph(cycles,print_cycle):
 				print("Train Step Time: {}".format(end-start))
 	writer 	= tf.summary.FileWriter('logs',sess.graph)
 	saver 	= tf.train.Saver()
-	saver.save(sess,"..\\model\\DREAM")	
+	saver.save(sess,'..'+os.sep+'model'+os.sep+'DREAM')	
 	print("Final Error: {}".format(aggregate_error()))
 
 def val_error():
@@ -197,7 +198,7 @@ def val_error():
 	correct = 0
 	false_positives = 0
 	false_negatives = 0
-	val_data_loader = data_importer.data_importer('..\\Processed_Data\\user_baskets_loc',load_batch = 30,include_val = True)
+	val_data_loader = data_importer.data_importer('..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc',load_batch = 30,include_val = True)
 	estimation_points	= 0
 	true_positives	= 0
 	p_positives = 0
