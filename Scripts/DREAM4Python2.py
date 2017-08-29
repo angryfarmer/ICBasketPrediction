@@ -10,7 +10,7 @@ data_importer = imp.load_source("data_importer", 'Data_Processing'+os.sep+'data_
 
 
 ## Load input basket data
-data_loader = data_importer.data_importer('..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc',load_batch = 30,train_batch = 15)
+data_loader = data_importer.data_importer('..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc',load_batch = 30,train_batch = 20)
 
 ## Input dimension sizes
 in_dims						= np.load('..'+os.sep+'Processed_Data'+os.sep+'input_dims.npy')
@@ -19,13 +19,13 @@ number_of_data_features 	= in_dims[3]
 data_time_steps 			= in_dims[1]
 number_of_time_steps 		= data_time_steps
 # number_of_time_steps 		= 15
-data_time_step_start 		= number_of_time_steps - 5 - 1
+data_time_step_start 		= number_of_time_steps - 10 - 1
 number_of_users 			= in_dims[0]
 
 # print(in_dims)
 ## Ranks for Each Layer
 number_of_user_based_features 	= 1
-number_of_product_features 		= 10
+number_of_product_features 		= 6
 number_of_input_features 		= number_of_product_features + number_of_user_based_features
 L_1_nodes 						= number_of_input_features
 
