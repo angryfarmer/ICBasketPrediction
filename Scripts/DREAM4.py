@@ -10,7 +10,7 @@ spec.loader.exec_module(data_importer)
 
 
 ## Load input basket data
-data_loader = data_importer.data_importer('..\\Processed_Data\\user_baskets_loc',load_batch = 30,train_batch = 1)
+data_loader = data_importer.data_importer('..\\Processed_Data\\user_baskets_loc',load_batch = 30,train_batch = 15)
 
 ## Input dimension sizes
 in_dims						= np.load('..\\Processed_Data\\input_dims.npy')
@@ -19,7 +19,7 @@ number_of_data_features 	= in_dims[3]
 data_time_steps 			= in_dims[1]
 number_of_time_steps 		= data_time_steps
 # number_of_time_steps 		= 15
-data_time_step_start 		= number_of_time_steps - 15 - 1
+data_time_step_start 		= number_of_time_steps - 5 - 1
 number_of_users 			= in_dims[0]
 
 # print(in_dims)
@@ -158,12 +158,13 @@ def aggregate_error():
 	err = 0
 	data_loader.reset_to_head()
 	while(not data_loader.end_of_file):
+		start = time.time()
 		in_sample,DSPO_sample,users = data_loader.next_training_sample()
 		if(in_sample.size > 0):
 			in_sample = in_sample
 			DSPO_sample = DSPO_sample
 			err += sess.run(cost,feed_dict = {input_data:in_sample,input_DSPO:DSPO_sample})
-		# print("Current Indicies: {}, Err: {}".format(data_loader.current_load_index,err))
+		print("Current Indicies: {}, Err: {}, Time Elapsed: {}".format(data_loader.index,err,time.time()-start))
 	return err
 
 def train_graph(cycles,print_cycle):		
@@ -177,7 +178,7 @@ def train_graph(cycles,print_cycle):
 			start = time.time()
 			in_sample,DSPO_sample,users = data_loader.next_training_sample()
 			end = time.time()
-			# print("Cycle: {}, Load Sample Time: {}".format(n,end-start))
+			print("Cycle: {}, Load Sample Time: {}".format(n,end-start))
 			if(in_sample.size > 0):
 				start = time.time()
 				in_sample = in_sample
