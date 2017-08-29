@@ -19,7 +19,7 @@ number_of_data_features 	= in_dims[3]
 data_time_steps 			= in_dims[1]
 number_of_time_steps 		= data_time_steps
 # number_of_time_steps 		= 15
-data_time_step_start 		= data_time_steps - number_of_time_steps
+data_time_step_start 		= number_of_time_steps - 15 - 1
 number_of_users 			= in_dims[0]
 
 # print(in_dims)
@@ -53,7 +53,7 @@ prev_hidden_layer 				= tf.zeros([tf.shape(input_data)[0],L_1_nodes])
 cost 							= tf.reduce_sum(tf.zeros([1]))
 prev_user_basket_representation = tf.zeros([tf.shape(input_data)[0],number_of_product_features])
 prev_ordered_items 				= tf.zeros([tf.shape(input_data)[0],number_of_products])
-for n in range(number_of_time_steps - 1):
+for n in range(number_of_time_steps - data_time_step_start - 1):
 	with tf.name_scope("Time_Step_{}".format(n)):
 		## Prepare input using max of each feature over last n baskets
 		with tf.name_scope("Basket_Representation_{}".format(n)):
@@ -184,8 +184,8 @@ def train_graph(cycles,print_cycle):
 				DSPO_sample = DSPO_sample
 				sess.run(train_step,feed_dict = {input_data:in_sample,input_DSPO:DSPO_sample})
 				end = time.time()
-				if(data_loader.index % 100 == 0):
-					print("Train Step Time: {}".format(end-start))
+				# if(data_loader.index + 1 % 100 == 0):
+				print("Train Step Time: {}".format(end-start))
 	writer 	= tf.summary.FileWriter('logs',sess.graph)
 	saver 	= tf.train.Saver()
 	saver.save(sess,"..\\model\\DREAM")	
@@ -219,8 +219,11 @@ def val_error():
 	print("Correct: {}, False Positives: {}, False Negatives: {}, Data Points: {}, True Positives: {}, Predicted Positives: {}".format(correct,false_positives,false_negatives,estimation_points,true_positives,p_positives))
 	# print(n)
 	# print(val_data_loader.h5f_train.shape)
+
+print("Done Loading Graph")
+
 start = time.time()
-# train_graph(10,10)
+train_graph(500,10)
 end = time.time()
 print("Time Elapsed for Training: {}".format(end - start))
 
