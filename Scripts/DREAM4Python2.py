@@ -10,7 +10,7 @@ data_importer = imp.load_source("data_importer", 'Data_Processing'+os.sep+'data_
 
 
 ## Load input basket data
-data_loader = data_importer.data_importer('..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc',load_batch = 30,train_batch = 20)
+data_loader = data_importer.data_importer('..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc',load_batch = 30,train_batch = 5)
 
 ## Input dimension sizes
 in_dims						= np.load('..'+os.sep+'Processed_Data'+os.sep+'input_dims.npy')
