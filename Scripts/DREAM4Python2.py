@@ -4,14 +4,13 @@ import time
 import tensorflow as tf
 import numpy as np
 import os
-import importlib.util
-spec = importlib.util.spec_from_file_location("data_importer", 'Data_Processing'+os.sep+'data_importer2.py')
-data_importer = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(data_importer)
+import imp
+data_importer = imp.load_source("data_importer", 'Data_Processing'+os.sep+'data_importer2.py')
+
 
 
 ## Load input basket data
-data_loader = data_importer.data_importer('..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc',load_batch = 30,train_batch = 15)
+data_loader = data_importer.data_importer('..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc',load_batch = 30,train_batch = 5)
 
 ## Input dimension sizes
 in_dims						= np.load('..'+os.sep+'Processed_Data'+os.sep+'input_dims.npy')
@@ -20,13 +19,13 @@ number_of_data_features 	= in_dims[3]
 data_time_steps 			= in_dims[1]
 number_of_time_steps 		= data_time_steps
 # number_of_time_steps 		= 15
-data_time_step_start 		= number_of_time_steps - 5 - 1
+data_time_step_start 		= number_of_time_steps - 10 - 1
 number_of_users 			= in_dims[0]
 
 # print(in_dims)
 ## Ranks for Each Layer
 number_of_user_based_features 	= 1
-number_of_product_features 		= 10
+number_of_product_features 		= 6
 number_of_input_features 		= number_of_product_features + number_of_user_based_features
 L_1_nodes 						= number_of_input_features
 
@@ -161,8 +160,6 @@ def aggregate_error():
 	while(not data_loader.end_of_file):
 		start = time.time()
 		in_sample,DSPO_sample,users = data_loader.next_training_sample()
-		print("Data Load: {}".format(time.time() - start))
-		start = time.time()
 		if(in_sample.size > 0):
 			in_sample = in_sample
 			DSPO_sample = DSPO_sample

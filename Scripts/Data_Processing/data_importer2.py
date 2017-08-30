@@ -1,6 +1,7 @@
 import numpy as np
 import h5py
 import time
+import os
 	
 train_set_name = "train_set"
 val_set_name = "val_set"
@@ -122,7 +123,7 @@ class data_importer():
 test = False
 # test = True
 if(test):
-	data_file_path = "..\\..\\Processed_Data\\user_baskets_loc"
+	data_file_path = '..'+os.sep+'..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc'
 	data = data_importer(data_file_path,include_val = True)
 	n = 0
 	while not data.end_of_file:

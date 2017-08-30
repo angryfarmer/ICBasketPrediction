@@ -5,10 +5,10 @@ import h5py
 
 Test_Set = False
 product_features = 1
-inpath_str = "..\\..\\Data\\"
-data_file_path = "..\\..\\Processed_Data\\user_baskets_loc"
-val_set_path = "..\\..\\Processed_Data\\val_set"
-test_set_path = "..\\..\\Processed_Data\\test_set"
+inpath_str = ".."+os.sep+".."+os.sep+"Data"+os.sep+""
+data_file_path = ".."+os.sep+".."+os.sep+"Processed_Data"+os.sep+"user_baskets_loc"
+val_set_path = ".."+os.sep+".."+os.sep+"Processed_Data"+os.sep+"val_set"
+test_set_path = ".."+os.sep+".."+os.sep+"Processed_Data"+os.sep+"test_set"
 train_set_name = "train_set"
 val_set_name = "val_set"
 test_set_name = "test_set"
