@@ -121,16 +121,18 @@ class data_importer():
 		self.end_of_file = False
 
 test = False
-# test = True
+test = True
 if(test):
 	data_file_path = '..'+os.sep+'..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc'
-	data = data_importer(data_file_path,include_val = True)
+	data = data_importer(data_file_path,include_val = True,train_batch = 15)
 	n = 0
 	while not data.end_of_file:
 		start = time.time()
 		a,b,c = data.next_training_sample()
+		print(time.time() - start)
 		n += 1
-		if(n % 100 == 0):
+		# if(n % 100 == 0):
+		if(False):
 			print(np.sum(a[:,:20,:,:]))
 			print(np.sum(a[:,20:40,:,:]))
 			print(np.sum(a[:,40:60,:,:]))
