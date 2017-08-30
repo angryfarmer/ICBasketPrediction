@@ -160,6 +160,8 @@ def aggregate_error():
 	while(not data_loader.end_of_file):
 		start = time.time()
 		in_sample,DSPO_sample,users = data_loader.next_training_sample()
+		print("Data Load: {}".format(time.time() - start))
+		start = time.time()
 		if(in_sample.size > 0):
 			in_sample = in_sample
 			DSPO_sample = DSPO_sample

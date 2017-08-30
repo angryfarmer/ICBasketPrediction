@@ -20,12 +20,15 @@ class data_importer():
 		self.h5f_val = h5py.File(data_file_path,'r')[val_set_name][:,:]
 		self.h5f_test = h5py.File(data_file_path,'r')[test_set_name][:,:]
 		
-		## Output data shape information
+		## Data shape information
 		self.set_information = h5py.File(data_file_path,'r')[set_information]
 		self.time_steps = int(self.set_information[1])
 		print(self.time_steps)
 		self.products = int(self.set_information[2])
-		
+		self.train_user_steps = np.bincount(self.h5f_train[:,0].astype(np.int64))
+		self.val_user_steps = np.bincount(self.h5f_val[:,0].astype(np.int64))
+		self.test_user_steps = np.bincount(self.h5f_test[:,0].astype(np.int64))
+
 		## Looping variables
 		self.end_of_file = False
 		self.index = 0
@@ -37,6 +40,7 @@ class data_importer():
 		self.user_list = np.unique(self.h5f_train[:,0])
 		if(include_val):
 			self.user_list = np.unique(self.h5f_val[:,0])
+
 		if(include_test):
 			self.include_val = True
 			self.user_list = np.unique(self.h5f_test[:,0])
@@ -72,7 +76,9 @@ class data_importer():
 				sample[0,time_step,product_id - 1,0] = 1
 
 			if(self.include_test):
-				dspo = self.h5f_test[self.h5f_test[:,0] == user_id]
+				start_index = np.sum(self.train_user_steps[:user_id])
+				end_index = np.sum(self.train_user_steps[:user_id+1])
+				dspo = self.h5f_test[start_index:end_index]
 				print(np.shape(dspo))
 				sample_dspo[0,-1] = dspo[0,0]
 			## Override batch data if batch data is empty. Otherwise concatenate
@@ -89,14 +95,24 @@ class data_importer():
 		if(self.index >= len(self.user_list)):
 			self.end_of_file = True
 		return batch_data,batch_dspo,users
+	
 	def time_step_index(self,order_number,user_id,user_number_of_orders):
 		user_number_of_orders = user_number_of_orders + int(self.include_test)
 		return int(self.time_steps - 1 - (user_number_of_orders - 1) + order_number - 1)
 
 	def user_data_points(self,user_id):
-		user_data = self.h5f_train[self.h5f_train[:,0] == user_id]
+		start_index = np.sum(self.train_user_steps[:user_id])
+		end_index = np.sum(self.train_user_steps[:user_id+1])
+
+		user_data = self.h5f_train[start_index:end_index]
+		# if(len(np.unique(user_data[:,0])) > 1):
+		# 	print("Problem with unique users")
+		# 	print(end_index - start_index)
+		# 	print(np.unique(user_data[:,0]))
 		if(self.include_val):
-			user_data = np.concatenate((user_data,self.h5f_val[self.h5f_val[:,0] == user_id]),axis = 0)
+			start_index = np.sum(self.val_user_steps[:user_id])
+			end_index = np.sum(self.val_user_steps[:user_id+1])
+			user_data = np.concatenate((user_data,self.h5f_val[start_index:end_index]),axis = 0)
 		return user_data
 
 	def reset_to_head(self):
