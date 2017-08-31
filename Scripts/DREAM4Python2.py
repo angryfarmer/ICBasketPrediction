@@ -4,13 +4,18 @@ import time
 import tensorflow as tf
 import numpy as np
 import os
+import sys
 import imp
 data_importer = imp.load_source("data_importer", 'Data_Processing'+os.sep+'data_importer2.py')
 
+orig_out = sys.stdout
+outfile = open('out.txt','w')
+sys.stdout = outfile
 
+# print("WTF")
 
 ## Load input basket data
-data_loader = data_importer.data_importer('..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc',load_batch = 30,train_batch = 15)
+data_loader = data_importer.data_importer('..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc',load_batch = 30,train_batch = 25)
 
 ## Input dimension sizes
 in_dims						= np.load('..'+os.sep+'Processed_Data'+os.sep+'input_dims.npy')
@@ -169,9 +174,11 @@ def aggregate_error():
 
 def train_graph(cycles,print_cycle):		
 	## Iterate training
+	saver 	= tf.train.Saver()
 	for n in range(cycles):
 		# print(n)
 		if((n % print_cycle) == 0):
+		# if(true):
 			print("Train Step: {}, Error = {}".format(n,aggregate_error()))
 		data_loader.reset_to_head()
 		while(not data_loader.end_of_file):
@@ -187,12 +194,14 @@ def train_graph(cycles,print_cycle):
 				end = time.time()
 				# if(data_loader.index + 1 % 100 == 0):
 				print("Train Step Time: {}".format(end-start))
-				saver 	= tf.train.Saver()
-				saver.save(sess,'..'+os.sep+'model'+os.sep+'DREAM')	
+		saver.save(sess,'..'+os.sep+'model'+os.sep+'DREAM')
+		sys.stdout = orig_out
+		print("Cycle {} Completed".format(n))
+		sys.stdout = outfile
 	writer 	= tf.summary.FileWriter('logs',sess.graph)
-	saver 	= tf.train.Saver()
 	saver.save(sess,'..'+os.sep+'model'+os.sep+'DREAM')	
 	print("Final Error: {}".format(aggregate_error()))
+
 
 def val_error():
 	n = 0
