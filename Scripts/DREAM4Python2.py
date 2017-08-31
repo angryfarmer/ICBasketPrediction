@@ -10,7 +10,7 @@ data_importer = imp.load_source("data_importer", 'Data_Processing'+os.sep+'data_
 
 
 ## Load input basket data
-data_loader = data_importer.data_importer('..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc',load_batch = 30,train_batch = 5)
+data_loader = data_importer.data_importer('..'+os.sep+'Processed_Data'+os.sep+'user_baskets_loc',load_batch = 30,train_batch = 15)
 
 ## Input dimension sizes
 in_dims						= np.load('..'+os.sep+'Processed_Data'+os.sep+'input_dims.npy')
@@ -164,7 +164,7 @@ def aggregate_error():
 			in_sample = in_sample
 			DSPO_sample = DSPO_sample
 			err += sess.run(cost,feed_dict = {input_data:in_sample,input_DSPO:DSPO_sample})
-		print("Current Indicies: {}, Err: {}, Time Elapsed: {}".format(data_loader.index,err,time.time()-start))
+		# print("Current Indicies: {}, Err: {}, Time Elapsed: {}".format(data_loader.index,err,time.time()-start))
 	return err
 
 def train_graph(cycles,print_cycle):		
@@ -178,7 +178,7 @@ def train_graph(cycles,print_cycle):
 			start = time.time()
 			in_sample,DSPO_sample,users = data_loader.next_training_sample()
 			end = time.time()
-			print("Cycle: {}, Load Sample Time: {}".format(n,end-start))
+			# print("Cycle: {}, Load Sample Time: {}".format(n,end-start))
 			if(in_sample.size > 0):
 				start = time.time()
 				in_sample = in_sample
