@@ -25,7 +25,7 @@ number_of_users 			= in_dims[0]
 # print(in_dims)
 ## Ranks for Each Layer
 number_of_user_based_features 	= 1
-number_of_product_features 		= 6
+number_of_product_features 		= 5
 number_of_input_features 		= number_of_product_features + number_of_user_based_features
 L_1_nodes 						= number_of_input_features
 
@@ -187,6 +187,8 @@ def train_graph(cycles,print_cycle):
 				end = time.time()
 				# if(data_loader.index + 1 % 100 == 0):
 				print("Train Step Time: {}".format(end-start))
+				saver 	= tf.train.Saver()
+				saver.save(sess,'..'+os.sep+'model'+os.sep+'DREAM')	
 	writer 	= tf.summary.FileWriter('logs',sess.graph)
 	saver 	= tf.train.Saver()
 	saver.save(sess,'..'+os.sep+'model'+os.sep+'DREAM')	
